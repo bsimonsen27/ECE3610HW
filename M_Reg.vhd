@@ -33,36 +33,32 @@ library UNISIM;
 
 entity M_Reg is
   generic (N : integer := 4);                       -- how many bits do we want to shift
-  Port (d_in : in std_logic_vector(N-1 downto 0);   -- input data
-        clk : in std_logic;                         -- clock
-        s_in : in std_logic;                        -- serial input
-        ld : in std_logic;                          -- load enable (active high)
-        shft : in std_logic;                        -- shift enable (active high)
-        c_en : in std_logic;                         -- clear enable (active high)
-        d_out : out std_logic_vector(N-1 downto 0));-- output data
+  Port (Din: in std_logic_vector(N-1 downto 0); --N-bit input
+        Dout: out std_logic_vector(N-1 downto 0); --N-bit output
+        Clk: in std_logic;--Clock (rising edge)
+        Load: in std_logic;--Load enable
+        Shift: in std_logic;--Shift enable
+        Clear: in std_logic;--Clear enable
+        SerIn: in std_logic);--Serial input
 end M_Reg;
 
 architecture Behavioral of M_Reg is
 -------------- SIGNAL DECLARATION ---------------
-signal d_buf : std_logic_vector(N-1 downto 0);     -- internal signal for data
+signal Dinternal: std_logic_vector(N-1 downto 0); -- internal data signal
+
 
 begin
-
-process(clk)
+process (Clk)
 begin
-    if rising_edge (clk) then
-        if c_en = '1' then      -- clear data
-            d_buf <= (others => '0');
-        elsif ld = '1' then     -- load data in
-            d_buf <= d_in;
-        elsif shft = '1' then
-            d_buf <= s_in & d_buf(N-1 downto 1);
+    if (rising_edge(Clk)) then
+        if (Clear = '1') then
+            Dinternal<= (others => '0'); --Clear
+        elsif(Load = '1') then
+            Dinternal<= Din;--Load
+        elsif(Shift = '1') then
+            Dinternal<= SerIn& Dinternal(N-1 downto 1); --Shift
         end if;
     end if;
-
 end process;
-
-d_out <= d_buf;        -- buffer
-
-
+Dout<= Dinternal;--Drive outputs**
 end Behavioral;

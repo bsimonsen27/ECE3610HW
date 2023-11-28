@@ -33,84 +33,70 @@ library UNISIM;
 
 entity M_ctrl is
   generic ( N : integer := 2);
-  Port (clk : in std_logic;             -- clk
-        lsb : in std_logic;             -- least sig bit of multiplier
-        st : in std_logic;              -- start
-        ld : out std_logic;             -- load enable
-        shft_en : out std_logic;           -- shift enable
-        add_a : out std_logic;          -- load adder output 
-        d_flag : out std_logic );       -- done flag
+  Port (Clk: in std_logic;      --Clock (use rising edge)
+        Q0: in std_logic;       --LSB of multiplier
+        Start: in std_logic;    --Algorithm start pulse
+        Load: out std_logic;    --Load M,Q and Clear A
+        Shift: out std_logic;   --Shift A:Q
+        AddA: out std_logic;    --Load Adder output to A
+        Done: out std_logic);   --Indicate end of algorithm
 end M_ctrl;
 
 architecture Behavioral of M_ctrl is
 -------------- SIGNAL DECLARATION ------------------
-type state is (idle,        -- idle state
-               init, 
-               add,         -- add state
-               shift,       -- shift state
-               t_check);    -- correct timing
-signal cs : state := idle;
-signal cnt : unsigned (N-1 downto 0);
-signal wait_cnt : integer := 0;      -- used for timing issues 
-
+type states is (HaltS,InitS,QtempS,AddS,ShiftS);
+signal state: states := HaltS;
+signal CNT: unsigned(N-1 downto 0);
 begin
--------------- COMBINATIONAL LOGIC --------------
-d_flag <= '1' when cs = idle else '0';
-ld <= '1' when cs = init else '0';
-add_a <= '1' when cs = add else '0';
-shft_en <= '1' when cs = shift else '0';
+
+-- combinational logic
+Done <= '1' when state = HaltS else '0'; --End of algorithm
+Load <= '1' when state = InitS else '0'; --Load M/Q, Clear A
+AddA<= '1' when state = AddS else '0'; --Load adder to A
+Shift <= '1' when state = ShiftS else '0'; --Shift A:Q
 
 process(clk)
 begin
-    if rising_edge(clk) then
-        case cs is
----------------------------------------------------------------
-            when idle =>
-                if st = '1' then        -- start condition
-                    wait_cnt <= 1;
-                    cs <= add;
-                end if;
----------------------------------------------------------------
--- may not need this state
-            when init =>
----------------------------------------------------------------
-            when add =>
-             cs <= shift;
----------------------------------------------------------------
-            when shift =>
-                 if cnt = 2**N-1 then
-                    cs <= idle;
-                 else
-                    cs <= t_check;
-                 end if;
----------------------------------------------------------------
-            when t_check =>
-                if wait_cnt < 1 then 
-                    if lsb = '1' then
-                        cs <= add;
-                    else 
-                        cs <= shift;
-                    end if;
-                else
-                    wait_cnt <= wait_cnt - 1;
-                end if;
----------------------------------------------------------------
-            when others =>
+    if rising_edge(Clk) then
+        case state is
+-----------------------------------------
+        when HaltS=> 
+            if Start = '1' then --Start pulse applied?
+                state <= InitS;--Start the algorithm
+            end if;
+-----------------------------------------
+        when InitS=> 
+            state <= QtempS; --Test Q0 at next clock**
+-----------------------------------------
+        when QtempS=> 
+            if (Q0 = '1') then
+                state <= AddS; --Add if multiplier bit = 1
+            else
+                state <= ShiftS; --Skip add if multiplier bit = 0
+            end if;
+-----------------------------------------
+        when AddS=> 
+            state <= ShiftS; --Shift after add
+-----------------------------------------
+        when ShiftS=> 
+            if (CNT = 2**N -1) then
+                state <= HaltS; --Halt after 2^N iterations
+            else
+                state <= QtempS;--Next iteration of algorithm: test Q0 **
+            end if;
         end case;
     end if;
-
 end process;
 
-process(clk)
+process(Clk)
 begin
-    if rising_edge(clk) then
-        if cs = init then
-            cnt <= to_unsigned(0,N);
-        elsif cs = shift then
-            cnt <= cnt + 1;
+    if rising_edge(Clk) then
+        if state = InitS then
+            CNT <= to_unsigned(0,N);--Reset CNT in InitSstate
+        elsif state = ShiftS then
+            CNT <= CNT + 1;--Count in ShiftSstate
         end if;
     end if;
-
 end process;
 
 end Behavioral;

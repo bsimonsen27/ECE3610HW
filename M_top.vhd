@@ -32,23 +32,61 @@ library UNISIM;
 --use UNISIM.VComponents.all;
 
 entity M_top is
-    Port (clk : in std_logic;
-          m_p : in std_logic_vector(3 downto 0);
-          m_cand : in std_logic_vector(3 downto 0);
-          st : in std_logic; 
-          d_flag : out std_logic;
-          p_out : out std_logic_vector(7 downto 0));
+    Port (Multiplier: in std_logic_vector(3 downto 0);
+        Multiplicand: in std_logic_vector(3 downto 0);
+        Product: out std_logic_vector(7 downto 0);
+        Start: in std_logic;
+        Clk: in std_logic;
+        Done: out std_logic);
 end M_top;
 
 architecture Behavioral of M_top is
 --use work.mult_components.all;
 
 ----------- SIGNAL DECLARATION ---------------
-signal m_out, q_out : std_logic_vector(3 downto 0);
-signal d_out, a_out : std_logic_vector(4 downto 0);
-signal ld_s, shift_s, adda_s : std_logic;
+signal Mout,Qout: std_logic_vector(3 downto 0);
+signal Dout,Aout: std_logic_vector(4 downto 0);
+signal Load,Shift,AddA: std_logic;
+
+
+component M_ctrl --Multiplier controller
+generic (N: integer := 2);
+port ( Clk:in std_logic;--rising edge clock
+        Q0:in std_logic;--LSB of multiplier
+        Start: in std_logic;--start algorithm
+        Load:out std_logic; --Load M,Q; Clear A
+        Shift: out std_logic; --Shift A:Q
+        AddA: out std_logic; --Adder -> A
+        Done: out std_logic);--Algorithm completed
+end component;
+component adderN--N-bit adder, N+1 bit output
+generic (N: integer := 4);
+port( A,B: in std_logic_vector(N-1 downto 0);
+        S: out std_logic_vector(N downto 0));
+end component;
+component M_Reg--N-bit register with load/shift/clear
+generic (N: integer := 4);
+port ( Din: in std_logic_vector(N-1 downto 0); --N-bit input
+        Dout: out std_logic_vector(N-1 downto 0); --N-bit output
+        Clk: in std_logic;--rising edge clock
+        Load: in std_logic;--Load enable
+        Shift: in std_logic; --Shift enable
+        Clear: in std_logic;--Clear enable
+        SerIn: in std_logic);--Serial input
+end component;
 
 begin
 
+C: M_ctrl generic map (2)--Controller with 2-bit counter
+port map (Clk,Qout(0),Start,Load,Shift,AddA,Done);
+A: adderN generic map (4)--4-bit adder; 5-bit output includes carry
+port map (Aout(3 downto 0),Mout,Dout);
+M: M_Reg generic map (4)--4-bit Multiplicand register
+port map (Multiplicand,Mout,Clk,Load,'0','0','0');
+Q: M_Reg generic map (4)--4-bit Multiplier register
+port map (Multiplier,Qout,Clk,Load,Shift,'0',Aout(0));
+ACC: M_Reg generic map (5)--5-bit Accumulator register
+port map (Dout,Aout,Clk,AddA,Shift,Load,'0');
+Product <= Aout(3 downto 0) & Qout; --8-bit product
 
 end Behavioral;
