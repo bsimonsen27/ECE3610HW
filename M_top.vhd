@@ -78,15 +78,41 @@ end component;
 begin
 
 C: M_ctrl generic map (2)--Controller with 2-bit counter
-port map (Clk,Qout(0),Start,Load,Shift,AddA,Done);
+port map (Clk => Clk,
+          Q0 => Qout(0),
+          Start => Start,
+          Load => Load,
+          Shift => Shift,
+          AddA => AddA,
+          Done => Done);
 A: adderN generic map (4)--4-bit adder; 5-bit output includes carry
-port map (Aout(3 downto 0),Mout,Dout);
+port map (A => Aout(3 downto 0),
+          B => Mout,
+          S => Dout);
 M: M_Reg generic map (4)--4-bit Multiplicand register
-port map (Multiplicand,Mout,Clk,Load,'0','0','0');
+port map (Din => Multiplicand,
+          Dout => Mout,
+          Clk => Clk,
+          Load => Load,
+          Shift => '0',
+          Clear => '0',
+          SerIn => '0');
 Q: M_Reg generic map (4)--4-bit Multiplier register
-port map (Multiplier,Qout,Clk,Load,Shift,'0',Aout(0));
+port map (Din => Multiplier,
+          Dout => Qout,
+          Clk => Clk,
+          Load => Load,
+          Shift => Shift,
+          Clear => '0',
+          SerIn => Aout(0));
 ACC: M_Reg generic map (5)--5-bit Accumulator register
-port map (Dout,Aout,Clk,AddA,Shift,Load,'0');
+port map (Din => Dout,
+          Dout => Aout,
+          Clk => Clk,
+          Load => AddA,
+          Shift => Shift,
+          Clear => Load,
+          SerIn => '0');
 Product <= Aout(3 downto 0) & Qout; --8-bit product
 
 end Behavioral;

@@ -44,29 +44,33 @@ end M_ctrl;
 
 architecture Behavioral of M_ctrl is
 -------------- SIGNAL DECLARATION ------------------
-type states is (HaltS,InitS,QtempS,AddS,ShiftS);
-signal state: states := HaltS;
+type states is (Idle,
+                InitS,
+                QtempS,
+                AddS,
+                ShiftS);
+signal state: states := Idle;
 signal CNT: unsigned(N-1 downto 0);
 begin
 
 -- combinational logic
-Done <= '1' when state = HaltS else '0'; --End of algorithm
-Load <= '1' when state = InitS else '0'; --Load M/Q, Clear A
-AddA<= '1' when state = AddS else '0'; --Load adder to A
-Shift <= '1' when state = ShiftS else '0'; --Shift A:Q
+Done <= '1' when state = Idle else '0';     -- finished calculations
+Load <= '1' when state = InitS else '0';    --Load M/Q, Clear A
+AddA<= '1' when state = AddS else '0';      --Load adder to A
+Shift <= '1' when state = ShiftS else '0';  --Shift A:Q
 
 process(clk)
 begin
     if rising_edge(Clk) then
         case state is
 -----------------------------------------
-        when HaltS=> 
-            if Start = '1' then --Start pulse applied?
-                state <= InitS;--Start the algorithm
+        when Idle=> 
+            if Start = '1' then 
+                state <= InitS;
             end if;
 -----------------------------------------
         when InitS=> 
-            state <= QtempS; --Test Q0 at next clock**
+            state <= QtempS; 
 -----------------------------------------
         when QtempS=> 
             if (Q0 = '1') then
@@ -80,7 +84,7 @@ begin
 -----------------------------------------
         when ShiftS=> 
             if (CNT = 2**N -1) then
-                state <= HaltS; --Halt after 2^N iterations
+                state <= Idle; -- stop after 2^N iterations
             else
                 state <= QtempS;--Next iteration of algorithm: test Q0 **
             end if;

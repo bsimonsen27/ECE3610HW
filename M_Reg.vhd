@@ -44,7 +44,7 @@ end M_Reg;
 
 architecture Behavioral of M_Reg is
 -------------- SIGNAL DECLARATION ---------------
-signal Dinternal: std_logic_vector(N-1 downto 0); -- internal data signal
+signal d_s: std_logic_vector(N-1 downto 0); -- internal data signal
 
 
 begin
@@ -52,13 +52,13 @@ process (Clk)
 begin
     if (rising_edge(Clk)) then
         if (Clear = '1') then
-            Dinternal<= (others => '0'); --Clear
+            d_s <= (others => '0'); --Clear
         elsif(Load = '1') then
-            Dinternal<= Din;--Load
+            d_s <= Din;--Load
         elsif(Shift = '1') then
-            Dinternal<= SerIn& Dinternal(N-1 downto 1); --Shift
+            d_s <= SerIn& d_s(N-1 downto 1); --Shift
         end if;
     end if;
 end process;
-Dout<= Dinternal;--Drive outputs**
+Dout<= d_s;--Drive outputs**
 end Behavioral;
